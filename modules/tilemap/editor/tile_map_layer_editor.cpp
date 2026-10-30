@@ -4356,6 +4356,7 @@ void TileMapLayerEditor::_draw_overlay() {
 		Rect2 visible_rect = xform_inv.xform(Rect2(Vector2(), custom_overlay->get_size()));
 		visible_rect.position -= Vector2(tile_shape_size) / 2;
 		visible_rect.size += Vector2(tile_shape_size);
+		Vector2 texture_size = missing_tile_texture->get_size();
 
 		// Draw tiles with invalid IDs in the grid.
 		TypedArray<Vector2i> used_cells = edited_layer->get_used_cells();
@@ -4377,29 +4378,23 @@ void TileMapLayerEditor::_draw_overlay() {
 				}
 
 				if (!source || !source->has_tile(tile_atlas_coords) || !source->has_alternative_tile(tile_atlas_coords, tile_alternative_tile)) {
-					// Generate a random color from the hashed identifier of the tiles.
-					Array to_hash = { tile_source_id, tile_atlas_coords, tile_alternative_tile };
-					uint32_t hash = RandomPCG(to_hash.hash()).rand();
-
-					Color color;
-					color = color.from_hsv(
-							(float)((hash >> 24) & 0xFF) / 256.0,
-							Math::lerp(0.5, 1.0, (float)((hash >> 16) & 0xFF) / 256.0),
-							Math::lerp(0.5, 1.0, (float)((hash >> 8) & 0xFF) / 256.0),
-							0.8 * scale_fading);
-
-					// Display the warning pattern.
-					Transform2D tile_xform;
-					tile_xform.set_origin(tile_center);
-					tile_xform.set_scale(tile_shape_size);
-					tile_set->draw_tile_shape(custom_overlay, xform * tile_xform, color, true, warning_pattern_texture);
+					Color color = Color(1.0, 0.4, 0.2, 0.8 * scale_fading);
 
 					// Draw the warning icon.
-					Vector2::Axis min_axis = missing_tile_texture->get_size().min_axis_index();
+					// 1. Obtener el tamaño de la textura y calcular el eje mínimo
+					// Vector2 texture_size = missing_tile_texture->get_size();
+					Vector2::Axis min_axis = texture_size.min_axis_index();
+
+					// 2. Calcular las dimensiones del icono manteniendo la proporción
 					Vector2 icon_size;
 					icon_size[min_axis] = tile_set->get_tile_size()[min_axis] / 3;
-					icon_size[(min_axis + 1) % 2] = (icon_size[min_axis] * missing_tile_texture->get_size()[(min_axis + 1) % 2] / missing_tile_texture->get_size()[min_axis]);
-					Rect2 rect = Rect2(xform.xform(tile_center) - (icon_size * xform.get_scale() / 2), icon_size * xform.get_scale());
+					icon_size[(min_axis + 1) % 2] = (icon_size[min_axis] * texture_size[(min_axis + 1) % 2]) / texture_size[min_axis];
+
+					// 3. Aplicar escala y posicionamiento
+					Vector2 scaled_size = icon_size * xform.get_scale();
+					Vector2 half_scaled_size = scaled_size * 0.5f;
+
+					Rect2 rect = Rect2(xform.xform(tile_center) - half_scaled_size, scaled_size);
 					custom_overlay->draw_texture_rect(missing_tile_texture, rect, false, Color(1, 1, 1, scale_fading));
 				}
 			}
